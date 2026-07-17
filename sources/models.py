@@ -47,7 +47,14 @@ def gpg_nm_trigger_run() -> None:
 
 
 def read_pelican() -> PelicanRec:
-    df = pd.read_parquet(config.GPG_PARQUET)
+    try:
+        df = pd.read_parquet(config.GPG_PARQUET)
+    except (FileNotFoundError, OSError) as e:
+        # missing model output must not kill the render — the freshness gate has
+        # already flagged staleness; DRAFT_FLAGGED still wants a report out
+        print(f"[models] pelican forecast unavailable: {e}")
+        return PelicanRec(tj_day=0.0, mw=0.0, peak_days="—",
+                          note="Forecast output missing — review before relying on this panel.")
     df["GAS_DATE"] = pd.to_datetime(df["GAS_DATE"])
     if "REGION" in df.columns:
         df = df[df["REGION"] == config.PELICAN_REGION]
@@ -115,7 +122,11 @@ def read_pelican_daily() -> list:
     Columns used: GAS_DATE, PP_TJ, RUN_REASON, RRP_AVG, RRP_MAX.
     """
     from contracts import PelicanDay
-    df = pd.read_parquet(config.PELICAN_DAILY_PARQUET)
+    try:
+        df = pd.read_parquet(config.PELICAN_DAILY_PARQUET)
+    except (FileNotFoundError, OSError) as e:
+        print(f"[models] pelican daily export unavailable: {e}")
+        return []
     df["GAS_DATE"] = pd.to_datetime(df["GAS_DATE"])
     df = df[df["GAS_DATE"] >= pd.Timestamp.today().normalize()].sort_values("GAS_DATE").head(7)
     return [PelicanDay(r["GAS_DATE"].strftime("%a %d"), round(float(r["PP_TJ"]), 1),

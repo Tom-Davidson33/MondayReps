@@ -1,0 +1,8 @@
+jinja2
+pandas
+pyarrow
+matplotlib
+oracledb
+python-dotenv
+pywin32; sys_platform == "win32"
+premailer

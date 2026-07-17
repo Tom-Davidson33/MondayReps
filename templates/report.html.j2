@@ -1,0 +1,252 @@
+{#- Tom's Monday Report — Jinja template. Renders ONLY from context `c`. -#}
+{%- set SEV = {
+  'high':        {'bd':'#c62828','bg':'#fbeaea','fg':'#c62828'},
+  'opportunity': {'bd':'#2e7d32','bg':'#e9f4ec','fg':'#2e7d32'},
+  'info':        {'bd':'#1565c0','bg':'#e8f0fb','fg':'#1565c0'},
+  'watch':       {'bd':'#e08a00','bg':'#fff4e0','fg':'#b56b00'}
+} -%}
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tom's Monday Report</title>
+<style>
+  body { margin:0; padding:0; background:#e9edf1; }
+  .txt{font-family:'Segoe UI',Arial,sans-serif;} .num{font-family:'Consolas','Courier New',monospace;}
+  table{border-collapse:collapse;} .wrap{width:720px;margin:0 auto;}
+  .sec-h{font-family:'Segoe UI',Arial,sans-serif;font-size:13px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#0f1720;}
+  .dh th{font-family:'Segoe UI',Arial,sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#5b6672;text-align:right;padding:7px 10px;border-bottom:2px solid #0f1720;}
+  .dh th.l{text-align:left;}
+  .dr td{font-family:'Consolas','Courier New',monospace;font-size:13px;text-align:right;padding:7px 10px;border-bottom:1px solid #e2e6ea;color:#1a2129;}
+  .dr td.l{font-family:'Segoe UI',Arial,sans-serif;text-align:left;}
+  .muted{color:#5b6672;}
+</style></head>
+<body class="txt">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#e9edf1;">
+<tr><td align="center" style="padding:18px 10px;">
+<table role="presentation" class="wrap" width="720" cellpadding="0" cellspacing="0" style="background:#fff;border:1px solid #cfd6dd;">
+
+  <!-- HEADER -->
+  <tr><td style="background:#0f1720;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td style="padding:18px 24px 14px;">
+        <div style="font-family:'Segoe UI',Arial,sans-serif;font-size:22px;font-weight:800;letter-spacing:1px;color:#fff;">TOM&rsquo;S MONDAY REPORT</div>
+        <div class="num" style="font-size:12px;color:#8b97a4;padding-top:4px;">Week ahead &nbsp;&middot;&nbsp; {{ c.week_label }}</div>
+      </td>
+      <td align="right" style="padding:18px 24px 14px;vertical-align:bottom;">
+        <div class="num" style="font-size:11px;color:#8b97a4;">Generated {{ c.generated_ts }}</div>
+        <div class="num" style="font-size:11px;color:#8b97a4;">Gas &amp; Power &mdash; NEM / East Coast</div>
+      </td>
+    </tr></table>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="height:3px;background:#f5a623;font-size:0;line-height:0;">&nbsp;</td></tr></table>
+  </td></tr>
+
+  {% if c.is_stale %}
+  <!-- STALE BANNER -->
+  <tr><td style="background:#fbeaea;border-bottom:1px solid #eab8b8;padding:8px 24px;">
+    <span class="num" style="font-size:12px;font-weight:700;color:#c62828;">&#9888; Underlying data older than expected &mdash; review before distributing.</span>
+  </td></tr>
+  {% endif %}
+
+  <!-- BLUF -->
+  <tr><td style="padding:20px 24px 6px;"><div class="sec-h">This week&rsquo;s calls</div></td></tr>
+  <tr><td style="padding:4px 24px 10px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+    {% for s in c.bluf %}{% set k = SEV[s.severity] %}
+      <tr><td style="border-left:4px solid {{ k.bd }};background:{{ k.bg }};padding:8px 12px;">
+        <span class="num" style="font-size:11px;font-weight:700;color:{{ k.fg }};">{{ s.tag }}</span>
+        <span style="font-size:13px;color:#1a2129;"> &nbsp;{{ s.headline }}</span>
+      </td></tr>
+      {% if not loop.last %}<tr><td style="height:6px;font-size:0;line-height:0;">&nbsp;</td></tr>{% endif %}
+    {% else %}
+      <tr><td class="muted" style="font-size:13px;padding:8px 12px;">No rules fired this week.</td></tr>
+    {% endfor %}
+    </table>
+  </td></tr>
+
+  <!-- WEATHER -->
+  <tr><td style="padding:16px 24px 6px;border-top:1px solid #e2e6ea;"><div class="sec-h">Weather &amp; renewables</div></td></tr>
+  <tr><td style="padding:2px 24px 12px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr class="dh"><th class="l">Day</th><th>EDD</th><th>Min &deg;C</th><th>Max &deg;C</th><th>Wind MW</th><th>Solar MW</th><th class="l" style="padding-left:14px;">Wind profile</th></tr>
+      {% for d in c.weather %}
+      {%- if d.edd >= 21 %}{% set sh='#fbcccc' %}{% elif d.edd >= 19 %}{% set sh='#fdd9d9' %}{% elif d.edd >= 17 %}{% set sh='#fdeaea' %}{% else %}{% set sh='#fdefef' %}{% endif -%}
+      {%- set wc = '#c62828' if d.wind_mw < 800 else '#1565c0' -%}
+      <tr class="dr">
+        <td class="l">{{ d.label }}</td>
+        <td style="background:{{ sh }};">{{ '%.1f'|format(d.edd) }}</td>
+        <td>{{ '%.1f'|format(d.tmin) }}</td><td>{{ '%.1f'|format(d.tmax) }}</td>
+        <td>{{ '{:,}'.format(d.wind_mw) }}</td><td>{{ '{:,}'.format(d.solar_mw) }}</td>
+        <td class="l" style="padding-left:14px;">
+          <table role="presentation" cellpadding="0" cellspacing="0" width="100"><tr>
+            <td style="background:{{ wc }};height:9px;width:{{ wind_pct(d.wind_mw) }}px;font-size:0;">&nbsp;</td>
+            <td style="background:#eef1f4;height:9px;font-size:0;">&nbsp;</td>
+          </tr></table>
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    <div class="num muted" style="font-size:11px;padding-top:6px;">EDD shaded by heating load &middot; Wind bar scaled to {{ '{:,.0f}'.format(c.wind_bar_scale) }} MW &middot; Source: BOM/ECMWF, portfolio forecast.</div>
+  </td></tr>
+
+  <!-- ELEC -->
+  <tr><td style="padding:16px 24px 6px;border-top:1px solid #e2e6ea;"><div class="sec-h">Electricity &mdash; NEM</div></td></tr>
+  <tr><td style="padding:2px 24px 4px;">
+    <div class="num muted" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding-bottom:4px;">Generation &amp; network outages (NOS / STPASA)</div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr class="dh"><th class="l">Asset / element</th><th class="l">Region</th><th class="l">Window</th><th>MW</th><th class="l" style="padding-left:14px;">&Delta; vs last wk</th></tr>
+      {% for o in c.nem_outages %}
+      {%- if o.delta_dir=='up' %}{% set dc='#c62828' %}{% set ar='&#9650; ' %}{% elif o.delta_dir=='down' %}{% set dc='#2e7d32' %}{% set ar='&#9660; ' %}{% else %}{% set dc='#5b6672' %}{% set ar='&mdash; ' %}{% endif -%}
+      <tr class="dr">
+        <td class="l">{{ o.asset }}</td><td class="l">{{ o.region }}</td><td class="l">{{ o.window }}</td><td>{{ o.mw }}</td>
+        <td class="l" style="padding-left:14px;"><span style="color:{{ dc }};">{{ ar|safe }}{{ o.delta }}</span></td>
+      </tr>
+      {% endfor %}
+    </table>
+  </td></tr>
+  <tr><td style="padding:12px 24px;">
+    <div class="num muted" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding-bottom:4px;">Binding constraints to watch</div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      {% for k in c.constraints %}
+      {%- set cb = '#e08a00' if k.severity=='watch' else '#1565c0' -%}
+      <tr><td style="padding:5px 12px;background:#f5f6f8;border-left:3px solid {{ cb }};">
+        <span class="num" style="font-size:12px;color:#1a2129;">{{ k.cid }}</span>
+        <span style="font-size:12px;color:#5b6672;"> &mdash; {{ k.note }}</span>
+      </td></tr>
+      {% if not loop.last %}<tr><td style="height:5px;font-size:0;line-height:0;">&nbsp;</td></tr>{% endif %}
+      {% endfor %}
+    </table>
+  </td></tr>
+
+  <!-- GAS -->
+  <tr><td style="padding:16px 24px 6px;border-top:1px solid #e2e6ea;"><div class="sec-h">Gas &mdash; East Coast</div></td></tr>
+  <tr><td style="padding:2px 24px 4px;">
+    <div class="num muted" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding-bottom:4px;">LNG / supply outages</div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr class="dh"><th class="l">Facility</th><th class="l">Type</th><th class="l">Window</th><th>TJ/day</th><th class="l" style="padding-left:14px;">Note</th></tr>
+      {% for l in c.lng_outages %}
+      {%- if l.note_dir=='up' %}{% set nc='#c62828' %}{% elif l.note_dir=='down' %}{% set nc='#2e7d32' %}{% else %}{% set nc='#5b6672' %}{% endif -%}
+      <tr class="dr">
+        <td class="l">{{ l.facility }}</td><td class="l">{{ l.kind }}</td><td class="l">{{ l.window }}</td><td>{{ l.tj_day }}</td>
+        <td class="l" style="padding-left:14px;"><span style="color:{{ nc }};">{{ l.note }}</span></td>
+      </tr>
+      {% endfor %}
+    </table>
+  </td></tr>
+  <tr><td style="padding:12px 24px;">
+    <div class="num muted" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding-bottom:4px;">Implied price curve &mdash; next 7 days ($/GJ, GSH settled trades)</div>
+    {% if c.curve_png %}
+    <img src="{{ c.curve_png }}" alt="7-day gas curve" style="width:100%;max-width:672px;display:block;border:1px solid #e2e6ea;">
+    {% else %}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      {% for p in c.curve %}
+      {%- if p.is_min %}{% set pc='#2e7d32' %}{% set bold='font-weight:700;' %}{% elif p.is_max %}{% set pc='#c62828' %}{% set bold='font-weight:700;' %}{% else %}{% set pc='#0f6bb0' %}{% set bold='' %}{% endif -%}
+      <tr class="dr" {% if loop.last %}style="border:0;"{% endif %}>
+        <td class="l" style="width:70px;">{{ p.label }}</td>
+        <td class="num" style="width:52px;text-align:right;padding-right:10px;color:{{ pc }};{{ bold }}">{{ '%.2f'|format(p.price) }}</td>
+        <td><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr>
+          <td style="background:{{ pc }};height:11px;width:{{ curve_pct(p.price) }}%;font-size:0;">&nbsp;</td>
+          <td style="background:#eef1f4;font-size:0;">&nbsp;</td>
+        </tr></table></td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% endif %}
+  </td></tr>
+
+  <!-- RECOMMENDATIONS -->
+  <tr><td style="background:#0f1720;padding:12px 24px;">
+    <div style="font-family:'Segoe UI',Arial,sans-serif;font-size:13px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#f5a623;">Recommendations for the week</div>
+  </td></tr>
+
+  {% if c.pelican_png %}
+  <!-- PELICAN DAILY GAS USAGE CHART -->
+  <tr><td style="padding:14px 24px 4px;">
+    <div class="num muted" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding-bottom:6px;">Pelican Point &mdash; daily gas usage forecast <span style="font-weight:400;text-transform:none;">(TJ/day, bar colour = run reason; line = implied SA1 price)</span></div>
+    <img src="{{ c.pelican_png }}" alt="Pelican daily gas usage" style="width:100%;max-width:672px;display:block;border:1px solid #e2e6ea;">
+  </td></tr>
+  {% endif %}
+  <tr><td style="padding:14px 24px 4px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <!-- BESS -->
+        <td width="50%" valign="top" style="padding:0 8px 12px 0;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #d8dde3;">
+            <tr><td style="background:#e8f0fb;padding:7px 12px;border-bottom:1px solid #d8dde3;"><span class="num" style="font-size:11px;font-weight:700;color:#1565c0;">BESS &mdash; 2-CYCLE FORECAST</span></td></tr>
+            <tr><td style="padding:10px 12px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr class="dr" style="border:0;"><td class="l" style="border:0;padding:3px 0;">AM spread</td><td style="border:0;padding:3px 0;">${{ '%.0f'|format(c.bess.am_spread) }}/MWh</td></tr>
+                <tr class="dr" style="border:0;"><td class="l" style="border:0;padding:3px 0;">PM spread</td><td style="border:0;padding:3px 0;">${{ '%.0f'|format(c.bess.pm_spread) }}/MWh</td></tr>
+                <tr class="dr" style="border:0;"><td class="l muted" style="border:0;padding:3px 0;">Threshold</td><td class="muted" style="border:0;padding:3px 0;">&ge; ${{ '%.0f'|format(c.bess.threshold) }}</td></tr>
+              </table>
+              {%- set bfg = '#2e7d32' if c.bess.fired else '#5b6672' %}{% set bbg = '#e9f4ec' if c.bess.fired else '#f5f6f8' -%}
+              <div style="margin-top:6px;padding:5px 10px;background:{{ bbg }};border-left:3px solid {{ bfg }};">
+                <span class="num" style="font-size:12px;font-weight:700;color:{{ bfg }};">{{ c.bess.verdict }}</span>
+                {% if c.bess.days %}<span style="font-size:12px;color:#1a2129;"> {{ c.bess.days }}</span>{% endif %}
+              </div>
+            </td></tr>
+          </table>
+        </td>
+        <!-- PELICAN -->
+        <td width="50%" valign="top" style="padding:0 0 12px 8px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #d8dde3;">
+            <tr><td style="background:#fff4e0;padding:7px 12px;border-bottom:1px solid #d8dde3;"><span class="num" style="font-size:11px;font-weight:700;color:#b56b00;">PELICAN POINT &mdash; EXPECTED RUN</span></td></tr>
+            <tr><td style="padding:10px 12px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr class="dr" style="border:0;"><td class="l" style="border:0;padding:3px 0;">Exp. gas burn</td><td style="border:0;padding:3px 0;">{{ '%.0f'|format(c.pelican.tj_day) }} TJ/day</td></tr>
+                <tr class="dr" style="border:0;"><td class="l" style="border:0;padding:3px 0;">Exp. MW running</td><td style="border:0;padding:3px 0;">{{ '%.0f'|format(c.pelican.mw) }} MW</td></tr>
+                <tr class="dr" style="border:0;"><td class="l muted" style="border:0;padding:3px 0;">Peak days</td><td class="muted" style="border:0;padding:3px 0;">{{ c.pelican.peak_days }}</td></tr>
+              </table>
+              <div style="margin-top:6px;padding:5px 10px;background:#f5f6f8;border-left:3px solid #b56b00;"><span style="font-size:11px;color:#5b6672;">{{ c.pelican.note }}</span></div>
+            </td></tr>
+          </table>
+        </td>
+      </tr>
+      <tr>
+        <!-- SYNERGEN -->
+        <td width="50%" valign="top" style="padding:0 8px 12px 0;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #d8dde3;">
+            <tr><td style="background:#fbeaea;padding:7px 12px;border-bottom:1px solid #d8dde3;"><span class="num" style="font-size:11px;font-weight:700;color:#c62828;">SYNERGEN &mdash; PEAKER CALL</span></td></tr>
+            <tr><td style="padding:10px 12px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr class="dr" style="border:0;"><td class="l" style="border:0;padding:3px 0;">Trigger</td><td style="border:0;padding:3px 0;">&ge; ${{ '%.0f'|format(c.synergen.trigger) }}</td></tr>
+                {% for day, price in c.synergen.peaks %}
+                <tr class="dr" style="border:0;"><td class="l" style="border:0;padding:3px 0;">{{ day }} peak</td><td style="border:0;padding:3px 0;{% if price >= c.synergen.trigger %}color:#c62828;font-weight:700;{% endif %}">${{ '{:,.0f}'.format(price) }}</td></tr>
+                {% endfor %}
+              </table>
+              {%- set sfg = '#c62828' if c.synergen.fired else '#5b6672' %}{% set sbg = '#fbeaea' if c.synergen.fired else '#f5f6f8' -%}
+              <div style="margin-top:6px;padding:5px 10px;background:{{ sbg }};border-left:3px solid {{ sfg }};">
+                <span class="num" style="font-size:12px;font-weight:700;color:{{ sfg }};">{{ c.synergen.verdict }}</span>
+                {% if c.synergen.days %}<span style="font-size:12px;color:#1a2129;"> {{ c.synergen.days }}</span>{% endif %}
+              </div>
+            </td></tr>
+          </table>
+        </td>
+        <!-- GAS TRADES -->
+        <td width="50%" valign="top" style="padding:0 0 12px 8px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #d8dde3;">
+            <tr><td style="background:#e9f4ec;padding:7px 12px;border-bottom:1px solid #d8dde3;"><span class="num" style="font-size:11px;font-weight:700;color:#2e7d32;">GAS TRADES &mdash; TIMING</span></td></tr>
+            <tr><td style="padding:10px 12px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr class="dr" style="border:0;"><td class="l" style="border:0;padding:3px 0;">Best BUY day</td><td style="border:0;padding:3px 0;color:#2e7d32;font-weight:700;">{{ c.gas_trades.buy_day.split()[0] }} &mdash; ${{ '%.2f'|format(c.gas_trades.buy_price) }}</td></tr>
+                <tr class="dr" style="border:0;"><td class="l" style="border:0;padding:3px 0;">Best SELL day</td><td style="border:0;padding:3px 0;color:#c62828;font-weight:700;">{{ c.gas_trades.sell_day.split()[0] }} &mdash; ${{ '%.2f'|format(c.gas_trades.sell_price) }}</td></tr>
+                <tr class="dr" style="border:0;"><td class="l muted" style="border:0;padding:3px 0;">Rationale</td><td class="muted" style="border:0;padding:3px 0;font-size:11px;">{{ c.gas_trades.rationale }}</td></tr>
+              </table>
+              <div style="margin-top:6px;padding:5px 10px;background:#f5f6f8;border-left:3px solid #2e7d32;"><span style="font-size:11px;color:#5b6672;">If running hard: pre-buy {{ c.gas_trades.buy_day.split()[0] }} volume for the burn window.</span></div>
+            </td></tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+  <!-- FOOTER -->
+  <tr><td style="background:#0f1720;padding:12px 24px;">
+    <div class="num" style="font-size:10px;color:#8b97a4;line-height:1.6;">
+      Data current as at {{ c.data_as_at }}.<br>
+      <span style="color:#c8722a;">INTERNAL &mdash; MARKET SENSITIVE.</span> Subject to real-time dispatch judgement. Not for external distribution.
+    </div>
+  </td></tr>
+
+</table>
+</td></tr></table>
+</body></html>

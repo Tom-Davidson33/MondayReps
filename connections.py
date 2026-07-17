@@ -51,7 +51,11 @@ def _conn(alias: str) -> oracledb.Connection:
 
 def q(alias: str, sql: str, params: dict | None = None) -> pd.DataFrame:
     """Run a query on an alias, return a DataFrame. params are :named binds."""
-    return pd.read_sql(sql, _conn(alias), params=params or {})
+    import warnings
+    with warnings.catch_warnings():
+        # pandas warns that non-SQLAlchemy connections are untested; oracledb works fine
+        warnings.filterwarnings("ignore", message=".*supports SQLAlchemy.*")
+        return pd.read_sql(sql, _conn(alias), params=params or {})
 
 
 def close_all() -> None:

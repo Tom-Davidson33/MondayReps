@@ -29,12 +29,14 @@ AND STATIONID = :station
 ORDER BY VALIDTIME ASC
 """
 
-# forward wind/solar MW from the latest STPASA run, summed across portfolio regions
+# forward wind/solar MW from the latest STPASA run: sum across portfolio regions
+# per interval, then average the intervals within each day (a straight SUM over
+# the ~48 daily intervals would inflate MW by ~48x)
 _SQL_RENEW = """
-WITH latest AS (
+WITH per_interval AS (
     SELECT TRUNC(INTERVAL_DATETIME) AS GAS_DATE,
-           AVG(SS_WIND_UIGF)  AS WIND_MW,
-           AVG(SS_SOLAR_UIGF) AS SOLAR_MW
+           SUM(SS_WIND_UIGF)  AS WIND_MW,
+           SUM(SS_SOLAR_UIGF) AS SOLAR_MW
     FROM TESTER.STPASA_REGIONSOLUTION
     WHERE RUN_DATETIME = (SELECT MAX(RUN_DATETIME) FROM TESTER.STPASA_REGIONSOLUTION)
       AND REGIONID IN ({regions})
@@ -42,8 +44,8 @@ WITH latest AS (
       AND INTERVAL_DATETIME <= SYSDATE + 8
     GROUP BY TRUNC(INTERVAL_DATETIME), INTERVAL_DATETIME
 )
-SELECT GAS_DATE, SUM(WIND_MW) AS WIND_MW, SUM(SOLAR_MW) AS SOLAR_MW
-FROM latest GROUP BY GAS_DATE ORDER BY GAS_DATE
+SELECT GAS_DATE, AVG(WIND_MW) AS WIND_MW, AVG(SOLAR_MW) AS SOLAR_MW
+FROM per_interval GROUP BY GAS_DATE ORDER BY GAS_DATE
 """
 
 

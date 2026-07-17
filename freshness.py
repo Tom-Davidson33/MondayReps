@@ -38,7 +38,13 @@ def ensure_fresh(
 
     log(f"[{name}] stale (last {last}) — triggering run…")
     baseline = last
-    trigger_run()
+    try:
+        trigger_run()
+    except Exception as e:
+        # a failed trigger is a staleness outcome, not a pipeline crash — let the
+        # orchestrator apply STALE_POLICY instead of dying here
+        log(f"[{name}] trigger FAILED: {e}")
+        return False, last
 
     deadline = datetime.now() + timeout
     while datetime.now() < deadline:

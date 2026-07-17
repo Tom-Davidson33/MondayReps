@@ -31,4 +31,5 @@ def deliver(html: str, subject: str, to: list[str], cc: list[str] | None = None,
 
 def alert_owner(subject: str, body: str) -> None:
     """Plain-text heads-up to Tom when the report is held for staleness."""
-    deliver(f"<pre>{body}</pre>", subject, [config.OWNER_EMAIL], draft_only=False)
+    import html
+    deliver(f"<pre>{html.escape(body)}</pre>", subject, [config.OWNER_EMAIL], draft_only=False)

@@ -11,6 +11,7 @@ All tables/columns lifted from your price_drivers.py / data_fetcher.py.
 """
 from __future__ import annotations
 import json
+from datetime import datetime, timedelta
 
 import pandas as pd
 
@@ -62,22 +63,42 @@ def _snapshot_path():
     return config.SNAPSHOT_DIR / "nem_outage_snapshot.json"
 
 
+# don't roll the weekly baseline forward on mid-week test runs, or every rerun
+# would erase the "Δ vs last week" comparison
+_SNAPSHOT_MIN_AGE = timedelta(days=3)
+
+
+def _load_snapshot(p) -> tuple[set, datetime | None]:
+    if not p.exists():
+        return set(), None
+    try:
+        data = json.loads(p.read_text())
+    except Exception:
+        return set(), None
+    if isinstance(data, list):  # legacy format: bare DUID list, no timestamp
+        return set(data), None
+    try:
+        saved = datetime.fromisoformat(data.get("saved", ""))
+    except ValueError:
+        saved = None
+    return set(data.get("duids", [])), saved
+
+
 def read_outages() -> list[Outage]:
     df = q("me_market", _SQL_OUTAGES)
 
     # Δ vs last week
-    prev = set()
     p = _snapshot_path()
-    if p.exists():
-        try:
-            prev = set(json.loads(p.read_text()))
-        except Exception:
-            prev = set()
+    prev, saved = _load_snapshot(p)
     current = set(df["DUID"].tolist())
-    try:
-        p.write_text(json.dumps(sorted(current)))
-    except Exception:
-        pass
+    if saved is None or datetime.now() - saved >= _SNAPSHOT_MIN_AGE:
+        try:
+            p.write_text(json.dumps({
+                "saved": datetime.now().isoformat(timespec="seconds"),
+                "duids": sorted(current),
+            }))
+        except Exception:
+            pass
 
     out: list[Outage] = []
     for _, r in df.iterrows():

@@ -59,13 +59,11 @@ def build_context(week_label: str, week_start: str) -> ReportContext:
     # BESS spread still needs a VIC power-price forecast source (not in repos) — left
     # as an input. Synergen now uses the REAL forecast SA1 price (RRP_MAX) from the
     # Pelican daily model, which is the STPASA-demand-scaled reserve-gap implied price.
-    bess_rec = bess.evaluate(am_spread=214.0, pm_spread=268.0)
+    bess_rec = bess.evaluate(am_spread=config.BESS_AM_SPREAD, pm_spread=config.BESS_PM_SPREAD)
     if pelican_daily:
         syn_rec = synergen.evaluate([(d.label, d.rrp_max) for d in pelican_daily])
     else:
         syn_rec = synergen.evaluate([])
-    gt_rec = gas_trades.evaluate(curve, pelican) if curve else gas_trades.evaluate(
-        [__import__("contracts").CurvePoint("n/a", 0.0)], pelican)
     gt_rec = gas_trades.evaluate(curve, pelican)
 
     # ---- BLUF from fired signals ----

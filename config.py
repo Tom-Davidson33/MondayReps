@@ -18,6 +18,10 @@ OUTPUT_DIR.mkdir(exist_ok=True)
 BESS_SPREAD_THRESHOLD = 50.0              # $/MWh min spread to justify a cycle;
                                           #   BOTH am & pm must clear it for 2 cycles
 SYNERGEN_PRICE_TRIGGER = 1000.0           # $/MWh expected peak -> arm peakers
+PELICAN_HARD_RUN_TJ = 25.0                # TJ/day above which Pelican counts as "running hard"
+# manual BESS spread inputs until a VIC power-price forecast source is wired
+BESS_AM_SPREAD = 214.0                    # $/MWh
+BESS_PM_SPREAD = 268.0                    # $/MWh
 WIND_BAR_SCALE_MW = 3000.0                # full-width wind bar in the weather table
 GAS_CURVE_BAR_SCALE = 14.0                # $/GJ full-width gas curve bar
 

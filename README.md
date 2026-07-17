@@ -10,9 +10,20 @@ report is the LAST stage after the two model runs.
     python preview.py
 
 **Real pipeline (needs DB + model outputs):**
-    pip install jinja2 pandas pyarrow oracledb python-dotenv pywin32
+    pip install -r requirements.txt
     python run_report.py --no-send      # render only
     python run_report.py                # render + Outlook draft
+
+**Batch runners (Windows):**
+    run_all.bat                # 1) GPG_NM model  2) DWGM forecast  3) report + draft
+    run_all.bat --no-send      # same, but render only (no Outlook)
+    render_report.bat          # report render only — skips the models entirely
+
+`run_all.bat` creates `.venv` and installs `requirements.txt` on first run. The two
+model repo paths are set at the top of the file — edit them if the repos move. Each
+model runs with its own repo `.venv` if it has one, otherwise the report venv.
+Because the models run first, the report's freshness gate finds them fresh and goes
+straight to the render.
 
 ## Wiring status
 

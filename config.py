@@ -67,6 +67,20 @@ GPG_PARQUET   = GPG_NM_MODELS_DIR / "gpg_forecast_latest.parquet"
 GPG_META      = GPG_NM_MODELS_DIR / "gpg_forecast_meta.json"
 CURVE_PARQUET = GODFATHER_MODELS_DIR / "dwgm_forecast_latest.parquet"   # see models.py note
 
+# Upstream model runners. These are used by both the Python freshness gate and the
+# Windows batch orchestrator. Keep tool names here only; report output remains
+# desk-safe via orchestrate.py/templates.
+GPG_NM_REPO_DIR = _Path(_os.environ.get(
+    "GPG_NM_REPO_DIR",
+    str(GPG_NM_MODELS_DIR.parent) if str(GPG_NM_MODELS_DIR) else "",
+).strip())
+GODFATHER_REPO_DIR = _Path(_os.environ.get(
+    "GODFATHER_REPO_DIR",
+    str(GODFATHER_MODELS_DIR.parent) if str(GODFATHER_MODELS_DIR) else "",
+).strip())
+GPG_NM_COMMAND = _os.environ.get("GPG_NM_COMMAND", "python main.py").strip()
+GODFATHER_COMMAND = _os.environ.get("GODFATHER_COMMAND", "python main.py").strip()
+
 # local snapshot used to compute NEM outage "Δ vs last week"
 SNAPSHOT_DIR = _Path(__file__).parent / "out"
 

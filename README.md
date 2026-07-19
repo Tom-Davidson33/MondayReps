@@ -20,10 +20,11 @@ report is the LAST stage after the two model runs.
     render_report.bat          # report render only — skips the models entirely
 
 `run_all.bat` creates `.venv` and installs `requirements.txt` on first run. The two
-model repo paths are set at the top of the file — edit them if the repos move. Each
-model runs with its own repo `.venv` if it has one, otherwise the report venv.
-Because the models run first, the report's freshness gate finds them fresh and goes
-straight to the render.
+model repo paths/commands can be set in `.env` (`GPG_NM_REPO_DIR`,
+`GODFATHER_REPO_DIR`, `GPG_NM_COMMAND`, `GODFATHER_COMMAND`); otherwise the batch
+uses the OneDrive defaults in the file. Each model runs with its own repo `.venv` if
+it has one, otherwise the report venv is placed on PATH. Because the models run
+first, the report's freshness gate finds them fresh and goes straight to the render.
 
 ## Wiring status
 
@@ -35,7 +36,7 @@ Verified against your Godfather / GPG_NM repos and wired with REAL queries:
 | sources/gas.py | GSH.GAS_MEDIUM_TERM_CAP_OUTLOOK + GSH.GAS_FACILITY_SUMMARY |
 | sources/nem.py | TESTER.STPASA_DUIDAVAILABILITY (+DUDETAIL/SUMMARY/GENUNITS); DISPATCHCONSTRAINT |
 | sources/models.py (Pelican) | GPG_NM/models/gpg_forecast_latest.parquet (REGION='SA1') |
-| sources/models.py (curve) | GODFATHER_MODELS_DIR/dwgm_forecast_latest.parquet (see note) |
+| sources/models.py (curve) | GODFATHER_MODELS_DIR/dwgm_forecast_latest.parquet, falling back to GSH settled-trade VWAP if the DWGM export is missing |
 
 ## Two things you still set
 

@@ -18,6 +18,7 @@ Freshness readers/triggers below feed orchestrate.py's gate.
 """
 from __future__ import annotations
 import json
+import shlex
 import subprocess
 from datetime import datetime
 from typing import Optional
@@ -41,9 +42,14 @@ def gpg_nm_last_updated() -> Optional[datetime]:
 
 
 def gpg_nm_trigger_run() -> None:
-    # runs GPG_NM main.py in its repo dir; adjust if you use run.bat
-    cwd = str(config.GPG_NM_MODELS_DIR.parent)
-    subprocess.run(["python", "main.py"], cwd=cwd, check=True)
+    """Run the upstream Pelican forecast command configured in .env."""
+    if not str(config.GPG_NM_REPO_DIR):
+        raise RuntimeError("GPG_NM_REPO_DIR is not set")
+    subprocess.run(
+        shlex.split(config.GPG_NM_COMMAND, posix=False),
+        cwd=str(config.GPG_NM_REPO_DIR),
+        check=True,
+    )
 
 
 def read_pelican() -> PelicanRec:
@@ -75,22 +81,50 @@ def read_pelican() -> PelicanRec:
                       note="Nominate gas ahead of the peak burn window.")
 
 
-# ================================ GSH settled-trades curve ==================
+# ================================ DWGM implied curve =========================
 def godfather_last_updated() -> Optional[datetime]:
-    # curve now comes live from GSH trades; treat as always-fresh (DB-backed).
-    return datetime.now()
+    if config.CURVE_PARQUET.exists():
+        return datetime.fromtimestamp(config.CURVE_PARQUET.stat().st_mtime)
+    return None
 
 
 def godfather_trigger_run() -> None:
-    return  # nothing to trigger — curve is queried live from GSH
+    """Run the upstream DWGM forecast command configured in .env."""
+    if not str(config.GODFATHER_REPO_DIR):
+        raise RuntimeError("GODFATHER_REPO_DIR is not set")
+    subprocess.run(
+        shlex.split(config.GODFATHER_COMMAND, posix=False),
+        cwd=str(config.GODFATHER_REPO_DIR),
+        check=True,
+    )
 
 
 def read_curve() -> list[CurvePoint]:
     """
-    Build a next-7-day forward curve from settled GSH trades: for each future
-    delivery day, the volume-weighted average of the most recent trades.
-    Table/column names come from .env (confirm via the GSH discovery query).
+    Read the DWGM implied gas price curve produced by the upstream forecast.
+
+    Primary path is GODFATHER_MODELS_DIR/dwgm_forecast_latest.parquet with
+    GAS_DATE + PRICE (or FORECAST). If that file is not available yet, fall back
+    to the live GSH settled-trades VWAP curve so render-only previews still have
+    a desk-safe curve panel.
     """
+    if config.CURVE_PARQUET.exists():
+        df = pd.read_parquet(config.CURVE_PARQUET)
+        if "FORECAST" in df.columns and "PRICE" not in df.columns:
+            df = df.rename(columns={"FORECAST": "PRICE"})
+        df["GAS_DATE"] = pd.to_datetime(df["GAS_DATE"])
+        df = (
+            df[df["GAS_DATE"] >= pd.Timestamp.today().normalize()]
+            .sort_values("GAS_DATE")
+            .head(7)
+        )
+        if df.empty:
+            return []
+        lo, hi = df["PRICE"].min(), df["PRICE"].max()
+        return [CurvePoint(r["GAS_DATE"].strftime("%a %d"), round(float(r["PRICE"]), 2),
+                           is_min=(r["PRICE"] == lo), is_max=(r["PRICE"] == hi))
+                for _, r in df.iterrows()]
+
     from connections import q
     import config as C
     sql = f"""

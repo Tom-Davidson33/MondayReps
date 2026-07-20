@@ -82,6 +82,7 @@ if not exist "%MDIR%\" (
     echo [ERROR] %MNAME%: repo directory not found: "%MDIR%" - set %MNAME% repo dir in .env or at the top of run_all.bat.
     exit /b 1
 )
+if /i "%MCMD%"=="python main.py" if not exist "%MDIR%\main.py" call :detect_model_command "%MDIR%" MCMD || exit /b 1
 REM prefer the model repo's own venv if it has one, else the report venv
 set "MPY=%REPORT_PY%"
 if exist "%MDIR%\.venv\Scripts\python.exe" set "MPY=%MDIR%\.venv\Scripts\python.exe"
@@ -101,6 +102,20 @@ if not "%MRC%"=="0" (
 )
 echo [%time%] [%MNAME%] OK >> "%LOG%"
 exit /b 0
+
+:detect_model_command
+REM %1 repo dir, %2 variable name to receive command. Used when the default
+REM "python main.py" is wrong for a model repo.
+set "DDIR=%~1"
+set "DVAR=%~2"
+for %%F in (run.py forecast.py dwgm_forecast.py run_forecast.py godfather.py) do (
+    if exist "%DDIR%\%%F" (
+        set "%DVAR%=python %%F"
+        exit /b 0
+    )
+)
+echo [ERROR] No main.py found in "%DDIR%". Set GPG_NM_COMMAND or GODFATHER_COMMAND in .env to the actual model command.
+exit /b 1
 
 :load_env_value
 REM Read simple KEY=value lines from .env without echoing secrets. Existing shell

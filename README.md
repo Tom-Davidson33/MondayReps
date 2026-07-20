@@ -11,6 +11,8 @@ report is the LAST stage after the two model runs.
 
 **Real pipeline (needs DB + model outputs):**
     pip install -r requirements.txt
+    python check_setup.py           # verifies .env keys, paths and output files
+    python check_setup.py --connect # optional: also SELECT 1 from each Oracle DB
     python run_report.py --no-send      # render only
     python run_report.py                # render + Outlook draft
 
@@ -22,9 +24,11 @@ report is the LAST stage after the two model runs.
 `run_all.bat` creates `.venv` and installs `requirements.txt` on first run. The two
 model repo paths/commands can be set in `.env` (`GPG_NM_REPO_DIR`,
 `GODFATHER_REPO_DIR`, `GPG_NM_COMMAND`, `GODFATHER_COMMAND`); otherwise the batch
-uses the OneDrive defaults in the file. Each model runs with its own repo `.venv` if
-it has one, otherwise the report venv is placed on PATH. Because the models run
-first, the report's freshness gate finds them fresh and goes straight to the render.
+uses the OneDrive defaults in the file. If a repo does not have `main.py`, set its
+command explicitly in `.env` (for example `GODFATHER_COMMAND=python run.py`). Each
+model runs with its own repo `.venv` if it has one, otherwise the report venv is
+placed on PATH. Because the models run first, the report's freshness gate finds
+them fresh and goes straight to the render.
 
 ## Wiring status
 
@@ -36,16 +40,17 @@ Verified against your Godfather / GPG_NM repos and wired with REAL queries:
 | sources/gas.py | GSH.GAS_MEDIUM_TERM_CAP_OUTLOOK + GSH.GAS_FACILITY_SUMMARY |
 | sources/nem.py | TESTER.STPASA_DUIDAVAILABILITY (+DUDETAIL/SUMMARY/GENUNITS); DISPATCHCONSTRAINT |
 | sources/models.py (Pelican) | GPG_NM/models/gpg_forecast_latest.parquet (REGION='SA1') |
-| sources/models.py (curve) | GODFATHER_MODELS_DIR/dwgm_forecast_latest.parquet, falling back to GSH settled-trade VWAP if the DWGM export is missing |
+| sources/models.py (curve) | GODFATHER_MODELS_DIR/dwgm_forecast_latest.parquet or GODFATHER_MODELS_DIR/dwgm_forecast.pkl, falling back to GSH settled-trade VWAP if both DWGM exports are missing |
 
 ## Two things you still set
 
-1. **.env** — DB creds/TNS + the two model dirs. Your export path uses `GPG_NM`;
+1. **.env** — DB creds/TNS/DSN or host/service + the two model dirs. Your export path uses `GPG_NM`;
    your repo folder is `3. GPG_NM`. Point GPG_NM_MODELS_DIR at wherever the parquet
    actually lands, and check the Godfather dir.
 
-2. **Godfather curve export** — Godfather doesn't persist a daily curve file today.
-   Add these 4 lines after your forecast run so the report can read it:
+2. **Godfather curve export** — the report now reads the existing
+   `GODFATHER_MODELS_DIR/dwgm_forecast.pkl` path, or an explicit
+   `GODFATHER_FORECAST_PATH`. If you later add a parquet export, this also works:
        df = result.to_dataframe()
        df = df[df.SCHEDULE == "DAILY AVG"][["GAS_DATE", "FORECAST"]]
        df = df.rename(columns={"FORECAST": "PRICE"})

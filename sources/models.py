@@ -56,8 +56,6 @@ def _resolve_python_command(repo_dir: Path, command: str, env_key: str) -> list[
     if uses_default and not (repo_dir / "main.py").exists():
         for candidate in _ENTRY_CANDIDATES[1:]:
             if (repo_dir / candidate).exists():
-                if candidate.lower() == "forecast.py":
-                    return [parts[0], candidate, "forecast"]
                 return [parts[0], candidate]
         py_files = sorted(p.name for p in repo_dir.glob("*.py"))
         raise RuntimeError(
@@ -82,8 +80,6 @@ def _latest_existing(paths: list[Path | None]) -> Optional[datetime]:
 def _normalise_curve_df(df: pd.DataFrame) -> pd.DataFrame:
     """Return a daily GAS_DATE/PRICE dataframe from known Godfather export shapes."""
     df = df.copy()
-    if isinstance(df.columns, pd.MultiIndex):
-        df.columns = ["_".join(str(part) for part in col if str(part)) for col in df.columns]
     upper = {str(c).upper(): c for c in df.columns}
 
     # If the pickle/parquet contains multiple schedules, keep the daily-average curve.
@@ -101,17 +97,7 @@ def _normalise_curve_df(df: pd.DataFrame) -> pd.DataFrame:
             f"Found columns: {', '.join(map(str, df.columns))}"
         )
 
-    def _series(col) -> pd.Series:
-        data = df[col]
-        if isinstance(data, pd.DataFrame):
-            data = data.iloc[:, 0]
-        return data.apply(
-            lambda value: value[0]
-            if hasattr(value, "__len__") and not isinstance(value, (str, bytes)) and len(value) == 1
-            else value
-        )
-
-    out = pd.DataFrame({"GAS_DATE": _series(date_col), "PRICE": _series(price_col)})
+    out = df[[date_col, price_col]].rename(columns={date_col: "GAS_DATE", price_col: "PRICE"})
     out["GAS_DATE"] = pd.to_datetime(out["GAS_DATE"])
     out["PRICE"] = pd.to_numeric(out["PRICE"], errors="coerce")
     out = out.dropna(subset=["GAS_DATE", "PRICE"])

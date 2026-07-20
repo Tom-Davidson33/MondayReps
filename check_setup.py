@@ -83,8 +83,6 @@ def _resolve_command(repo: Path, command: str) -> tuple[bool, str]:
         if parts[1].lower() == "main.py":
             for candidate in ENTRY_CANDIDATES[1:]:
                 if (repo / candidate).exists():
-                    if candidate.lower() == "forecast.py":
-                        return True, f"auto-detectable as: {parts[0]} {candidate} forecast"
                     return True, f"auto-detectable as: {parts[0]} {candidate}"
             py_files = sorted(p.name for p in repo.glob("*.py")) if repo.exists() else []
             return False, "main.py missing; set command explicitly. Python files: " + (", ".join(py_files) or "none")
@@ -92,7 +90,7 @@ def _resolve_command(repo: Path, command: str) -> tuple[bool, str]:
     return True, " ".join(parts)
 
 
-def _check_model(label: str, repo_key: str, models_key: str, command_key: str, outputs: tuple[str | tuple[str, ...], ...], optional_outputs: tuple[str, ...] = ()) -> bool:
+def _check_model(label: str, repo_key: str, models_key: str, command_key: str, outputs: tuple[str | tuple[str, ...], ...]) -> bool:
     ok = True
     print(f"\n{label}")
     repo = _model_repo_from_env(repo_key, models_key)
@@ -112,13 +110,10 @@ def _check_model(label: str, repo_key: str, models_key: str, command_key: str, o
             paths = [models_dir / name for name in choices]
             found = next((path for path in paths if path.exists()), None)
             label = " or ".join(choices)
-            optional = all(name in optional_outputs for name in choices)
             detail = str(found) if found else "checked " + "; ".join(str(p) for p in paths)
-            if optional and found is None:
-                detail += " (optional chart input; report still renders)"
             # Forecast outputs may be created by the next model run, so mark absent
             # as fix-required for a clean report but do not print file contents.
-            ok &= _status(found is not None or optional, label, detail)
+            ok &= _status(found is not None, label, detail)
     return ok
 
 
@@ -175,7 +170,7 @@ def main() -> int:
         load_dotenv(ENV_PATH, override=False)
 
     ok &= _check_db_env()
-    ok &= _check_model("GPG_NM / Pelican forecast", "GPG_NM_REPO_DIR", "GPG_NM_MODELS_DIR", "GPG_NM_COMMAND", ("gpg_forecast_latest.parquet", "gpg_forecast_meta.json", "pelican_daily_latest.parquet"), optional_outputs=("pelican_daily_latest.parquet",))
+    ok &= _check_model("GPG_NM / Pelican forecast", "GPG_NM_REPO_DIR", "GPG_NM_MODELS_DIR", "GPG_NM_COMMAND", ("gpg_forecast_latest.parquet", "gpg_forecast_meta.json", "pelican_daily_latest.parquet"))
     ok &= _check_model("Godfather / DWGM forecast", "GODFATHER_REPO_DIR", "GODFATHER_MODELS_DIR", "GODFATHER_COMMAND", (("dwgm_forecast_latest.parquet", "dwgm_forecast.pkl"),))
     ok &= _check_godfather_pickle_override()
     ok &= _check_gsh_env()

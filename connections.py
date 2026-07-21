@@ -6,11 +6,8 @@ Aliases -> owners (from your db.py KNOWN_ALIASES):
     gas_market  -> VENCORP, STTM, WEATHERZONE, SEAGAS
     gas_trading -> tolling, gastrading
 
-Each alias first tries the Godfather-style env prefix (GAS_MARKET/ME_MARKET/
-GAS_TRADING), then the report-style prefix (GASMARKET/MEMARKET/GASTRADING).
-Each prefix reads {PREFIX}_TNS, {PREFIX}_DSN, or
-{PREFIX}_HOST/_PORT/_SERVICE plus _USER/_PASS. Thin mode, no Oracle client
-needed when you use host/service.
+Each alias reads {PREFIX}_TNS, {PREFIX}_DSN, or {PREFIX}_HOST/_PORT/_SERVICE plus
+_USER/_PASS. Thin mode, no Oracle client needed when you use host/service.
 """
 from __future__ import annotations
 import os
@@ -52,32 +49,9 @@ def _dsn(prefix: str) -> str:
     )
 
 
-def _has_credentials(prefix: str) -> bool:
-    return bool(os.environ.get(f"{prefix}_USER", "").strip()
-                and os.environ.get(f"{prefix}_PASS", "").strip())
-
-
-def _has_address(prefix: str) -> bool:
-    return bool(os.environ.get(f"{prefix}_TNS", "").strip()
-                or os.environ.get(f"{prefix}_DSN", "").strip()
-                or (os.environ.get(f"{prefix}_HOST", "").strip()
-                    and os.environ.get(f"{prefix}_SERVICE", "").strip()))
-
-
-def _resolve_prefix(alias: str) -> str:
-    for prefix in _PREFIXES[alias]:
-        if _has_credentials(prefix) and _has_address(prefix):
-            return prefix
-    expected = " or ".join(_PREFIXES[alias])
-    raise EnvironmentError(
-        f"No complete environment block for {alias}. Set USER/PASS and TNS/DSN "
-        f"or HOST/SERVICE for one of: {expected}"
-    )
-
-
 def _conn(alias: str) -> oracledb.Connection:
     if alias not in _conns or not _conns[alias].is_healthy():
-        prefix = _resolve_prefix(alias)
+        prefix = _PREFIX[alias]
         dsn = _dsn(prefix)
         try:
             _conns[alias] = oracledb.connect(

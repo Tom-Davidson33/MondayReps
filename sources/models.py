@@ -57,8 +57,6 @@ def _resolve_python_command(repo_dir: Path, command: str, env_key: str) -> list[
     if uses_default and not (repo_dir / "main.py").exists():
         for candidate in _ENTRY_CANDIDATES[1:]:
             if (repo_dir / candidate).exists():
-                if candidate.lower() == "forecast.py":
-                    return [parts[0], candidate, "forecast"]
                 return [parts[0], candidate]
         py_files = sorted(p.name for p in repo_dir.glob("*.py"))
         raise RuntimeError(
@@ -83,8 +81,6 @@ def _latest_existing(paths: list[Path | None]) -> Optional[datetime]:
 def _normalise_curve_df(df: pd.DataFrame) -> pd.DataFrame:
     """Return a daily GAS_DATE/PRICE dataframe from known Godfather export shapes."""
     df = df.copy()
-    if isinstance(df.columns, pd.MultiIndex):
-        df.columns = ["_".join(str(part) for part in col if str(part)) for col in df.columns]
     upper = {str(c).upper(): c for c in df.columns}
 
     # If the pickle/parquet contains multiple schedules, keep the daily-average curve.
@@ -102,30 +98,7 @@ def _normalise_curve_df(df: pd.DataFrame) -> pd.DataFrame:
             f"Found columns: {', '.join(map(str, df.columns))}"
         )
 
-    def _series(col) -> pd.Series:
-        data = df[col]
-        if isinstance(data, pd.DataFrame):
-            data = data.iloc[:, 0]
-        if len(data) == 1:
-            value = data.iloc[0]
-            if hasattr(value, "__len__") and not isinstance(value, (str, bytes)):
-                arr = np.asarray(value).squeeze()
-                if arr.ndim == 0:
-                    return pd.Series([arr.item()])
-                return pd.Series(arr.ravel())
-
-        def _cell(value):
-            if hasattr(value, "__len__") and not isinstance(value, (str, bytes)):
-                arr = np.asarray(value).squeeze()
-                if arr.ndim == 0:
-                    return arr.item()
-                if arr.size == 1:
-                    return arr.ravel()[0]
-            return value
-
-        return data.apply(_cell)
-
-    out = pd.DataFrame({"GAS_DATE": _series(date_col), "PRICE": _series(price_col)})
+    out = df[[date_col, price_col]].rename(columns={date_col: "GAS_DATE", price_col: "PRICE"})
     out["GAS_DATE"] = pd.to_datetime(out["GAS_DATE"])
     out["PRICE"] = pd.to_numeric(out["PRICE"], errors="coerce")
     out = out.dropna(subset=["GAS_DATE", "PRICE"])
@@ -240,19 +213,13 @@ def read_curve() -> list[CurvePoint]:
     Primary path is GODFATHER_MODELS_DIR/dwgm_forecast_latest.parquet. If that
     file is missing, read the existing Godfather pickle at GODFATHER_FORECAST_PATH
     / GODFATHER_MODELS_DIR/dwgm_forecast.pkl. If neither file is available, fall
-    back to live GSH settled-trades VWAP on me_market so render-only previews
-    still have a desk-safe curve panel.
+    back to live GSH settled-trades VWAP so render-only previews still have a
+    desk-safe curve panel.
     """
     if config.CURVE_PARQUET.exists():
-        try:
-            return _curve_points_from_df(pd.read_parquet(config.CURVE_PARQUET))
-        except Exception as exc:
-            print(f"[models] DWGM parquet curve unavailable: {exc}; falling back")
+        return _curve_points_from_df(pd.read_parquet(config.CURVE_PARQUET))
     if config.CURVE_PICKLE is not None and config.CURVE_PICKLE.exists():
-        try:
-            return _curve_points_from_df(_read_pickle_curve(config.CURVE_PICKLE))
-        except Exception as exc:
-            print(f"[models] DWGM pickle curve unavailable: {exc}; falling back")
+        return _curve_points_from_df(_read_pickle_curve(config.CURVE_PICKLE))
 
     from connections import q
     import config as C

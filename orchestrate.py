@@ -31,7 +31,7 @@ def _safe_read(name: str, reader, default):
         return default
 
 
-def _gate(refresh: bool = True) -> FreshnessStamp:
+def _gate() -> FreshnessStamp:
     """Run the ordered freshness chain. Returns a stamp describing the outcome."""
     if not refresh:
         f = config.FRESHNESS["gpg_nm"]

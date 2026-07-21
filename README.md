@@ -37,7 +37,7 @@ Verified against your Godfather / GPG_NM repos and wired with REAL queries:
 | Adapter | Source (verified) |
 |---|---|
 | sources/weather.py | WEATHERZONE.WEATHER_DAILY_FORECASTS + TESTER.STPASA_REGIONSOLUTION |
-| sources/gas.py | GSH.GAS_MEDIUM_TERM_CAP_OUTLOOK + GSH.GAS_FACILITY_SUMMARY |
+| sources/gas.py | GSH.GAS_MEDIUM_TERM_CAP_OUTLOOK + GSH.GAS_FACILITY_SUMMARY on me_market |
 | sources/nem.py | TESTER.STPASA_DUIDAVAILABILITY (+DUDETAIL/SUMMARY/GENUNITS); DISPATCHCONSTRAINT |
 | sources/models.py (Pelican) | GPG_NM/models/gpg_forecast_latest.parquet (REGION='SA1') |
 | sources/models.py (curve) | GODFATHER_MODELS_DIR/dwgm_forecast_latest.parquet or GODFATHER_MODELS_DIR/dwgm_forecast.pkl, falling back to GSH settled-trade VWAP if both DWGM exports are missing |
@@ -72,7 +72,8 @@ run only when logged on (Outlook COM needs an interactive session).
 ## Update (charts + GSH curve + Pelican)
 
 Added since last version:
-- **7-day gas curve graph** from GSH settled trades (VWAP per delivery day), rendered
+- **7-day gas curve graph** from DWGM export or GSH settled trades on me_market
+  (VWAP per delivery day), rendered
   as an email-safe PNG (matplotlib). Replaces the old table.
 - **Pelican Point — Daily Gas Usage Forecast chart**: TJ/day bars coloured by run
   reason (economic/NSCAS/SSM/off), implied SA1 price line overlaid.

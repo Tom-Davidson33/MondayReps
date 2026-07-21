@@ -54,7 +54,13 @@ def read_weather() -> list[WeatherDay]:
 
     reg_binds = {f"r{i}": r for i, r in enumerate(config.WEATHER_REGIONS)}
     reg_sql = ",".join(f":{k}" for k in reg_binds)
-    rn = q("me_market", _SQL_RENEW.format(regions=reg_sql), reg_binds)
+    try:
+        rn = q("me_market", _SQL_RENEW.format(regions=reg_sql), reg_binds)
+    except Exception as exc:
+        # MEMARKET/TNS problems should not erase the gas-market weather rows.
+        # Render EDD/min/max and leave wind/solar at 0 until MEMARKET is fixed.
+        print(f"[weather] renewables unavailable: {exc}")
+        rn = pd.DataFrame(columns=["GAS_DATE", "WIND_MW", "SOLAR_MW"])
 
     wx["GAS_DATE"] = pd.to_datetime(wx["GAS_DATE"])
     rn["GAS_DATE"] = pd.to_datetime(rn["GAS_DATE"])

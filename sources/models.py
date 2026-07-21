@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Optional
 
 import pandas as pd
+import numpy as np
 
 import config
 from contracts import PelicanRec, CurvePoint
@@ -231,7 +232,7 @@ def read_curve() -> list[CurvePoint]:
     GROUP BY TRUNC({C.GSH_TRADE_DATE_COL})
     ORDER BY DELIV_DATE
     """
-    df = q("gas_market", sql)
+    df = q("me_market", sql)
     df["DELIV_DATE"] = pd.to_datetime(df["DELIV_DATE"])
     if df.empty:
         return []

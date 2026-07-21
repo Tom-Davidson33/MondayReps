@@ -2,9 +2,9 @@
 Oracle connections — mirrors the env-var scheme from your Godfather db.py.
 
 Aliases -> owners (from your db.py KNOWN_ALIASES):
-    me_market   -> TESTER
-    gas_market  -> VENCORP, STTM, GSH, WEATHERZONE
-    gas_trading -> GASTRADING, SEAGAS
+    me_market   -> TESTER, GSH
+    gas_market  -> VENCORP, STTM, WEATHERZONE, SEAGAS
+    gas_trading -> tolling, gastrading
 
 Each alias reads {PREFIX}_TNS, {PREFIX}_DSN, or {PREFIX}_HOST/_PORT/_SERVICE plus
 _USER/_PASS. Thin mode, no Oracle client needed when you use host/service.
@@ -21,8 +21,13 @@ try:
 except ImportError:
     pass
 
-# report alias -> env prefix
-_PREFIX = {"me_market": "MEMARKET", "gas_market": "GASMARKET", "gas_trading": "GASTRADING"}
+# report alias -> env prefixes, in preference order. Prefer Godfather's names so
+# this report uses the same database settings when both naming schemes exist.
+_PREFIXES = {
+    "gas_market": ("GAS_MARKET", "GASMARKET"),
+    "me_market": ("ME_MARKET", "MEMARKET"),
+    "gas_trading": ("GAS_TRADING", "GASTRADING"),
+}
 _conns: dict[str, oracledb.Connection] = {}
 
 

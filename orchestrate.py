@@ -12,7 +12,7 @@ from datetime import datetime
 
 import config
 from contracts import (ReportContext, FreshnessStamp)
-from freshness import ensure_fresh
+from freshness import ensure_fresh, is_fresh
 from sources import models, weather, nem, gas
 from rules import bess, synergen, gas_trades, bluf
 
@@ -33,6 +33,17 @@ def _safe_read(name: str, reader, default):
 
 def _gate() -> FreshnessStamp:
     """Run the ordered freshness chain. Returns a stamp describing the outcome."""
+    if not refresh:
+        f = config.FRESHNESS["gpg_nm"]
+        g = config.FRESHNESS["godfather"]
+        nm_ts = models.gpg_nm_last_updated()
+        gf_ts = models.godfather_last_updated()
+        nm_ok = is_fresh(nm_ts, f["max_age"])
+        gf_ok = is_fresh(gf_ts, g["max_age"])
+        detail = (f"model refresh skipped · NM {'OK' if nm_ok else 'STALE'} · "
+                  f"Godfather {'OK' if gf_ok else 'STALE'}")
+        return FreshnessStamp(nm_ts, gf_ts, nm_ok and gf_ok, detail)
+
     # 1) GPG Nelder-Mead first
     f = config.FRESHNESS["gpg_nm"]
     nm_ok, nm_ts = ensure_fresh(
@@ -54,8 +65,8 @@ def _gate() -> FreshnessStamp:
     return FreshnessStamp(nm_ts, gf_ts, all_fresh, detail)
 
 
-def build_context(week_label: str, week_start: str) -> ReportContext:
-    stamp = _gate()
+def build_context(week_label: str, week_start: str, refresh_models: bool = True) -> ReportContext:
+    stamp = _gate(refresh=refresh_models)
     # Desk-safe "data current as at" — the effective pipeline time, no tool names.
     eff = stamp.godfather_updated or stamp.gpg_nm_updated or datetime.now()
     data_as_at = eff.strftime("%H:%M, %a %d %b")

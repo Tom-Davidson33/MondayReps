@@ -19,7 +19,7 @@ report is the LAST stage after the two model runs.
 **Batch runners (Windows):**
     run_all.bat                # 1) GPG_NM model  2) DWGM forecast  3) report + draft
     run_all.bat --no-send      # same, but render only (no Outlook)
-    render_report.bat          # report render only — skips the models entirely
+    render_report.bat          # report render only — uses existing model files, no model refresh
 
 `run_all.bat` creates `.venv` and installs `requirements.txt` on first run. The two
 model repo paths/commands can be set in `.env` (`GPG_NM_REPO_DIR`,

@@ -61,8 +61,14 @@ WEATHER_REGIONS   = ("VIC1", "SA1")          # portfolio wind/solar footprint
 PELICAN_REGION    = "SA1"                     # Pelican Point sits in SA1
 GPG_HEAT_RATE     = 8.5                       # GJ/MWh, matches GPG_NM implied default
 
-GPG_NM_MODELS_DIR    = _Path(_os.environ.get("GPG_NM_MODELS_DIR", ""))
-GODFATHER_MODELS_DIR = _Path(_os.environ.get("GODFATHER_MODELS_DIR", ""))
+DEFAULT_OPERATION_ARB_DIR = _Path(r"C:\Users\MS6653\OneDrive - ENGIE\Desktop\Operation Arb")
+DEFAULT_GPG_NM_REPO_DIR = DEFAULT_OPERATION_ARB_DIR / "3. GPG_NM"
+DEFAULT_GODFATHER_REPO_DIR = DEFAULT_OPERATION_ARB_DIR / "4. Godfather"
+DEFAULT_GPG_NM_MODELS_DIR = DEFAULT_GPG_NM_REPO_DIR / "models"
+DEFAULT_GODFATHER_MODELS_DIR = DEFAULT_GODFATHER_REPO_DIR / "models"
+
+GPG_NM_MODELS_DIR    = _Path(_os.environ.get("GPG_NM_MODELS_DIR", str(DEFAULT_GPG_NM_MODELS_DIR)))
+GODFATHER_MODELS_DIR = _Path(_os.environ.get("GODFATHER_MODELS_DIR", str(DEFAULT_GODFATHER_MODELS_DIR)))
 GPG_PARQUET   = GPG_NM_MODELS_DIR / "gpg_forecast_latest.parquet"
 GPG_META      = GPG_NM_MODELS_DIR / "gpg_forecast_meta.json"
 CURVE_PARQUET = GODFATHER_MODELS_DIR / "dwgm_forecast_latest.parquet"   # see models.py note

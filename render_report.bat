@@ -2,7 +2,7 @@
 setlocal
 REM ============================================================
 REM  Tom's Monday Report - RENDER ONLY (no Outlook draft/send)
-REM  Runs run_report.py --no-send in the project venv, then you
+REM  Runs run_report.py --no-send --skip-refresh in the project venv, then you
 REM  open out\tom_monday_report.html to preview.
 REM  Does NOT run the models first - use run_all.bat for that.
 REM ============================================================
@@ -21,8 +21,8 @@ echo Logging to %LOG%
 if not exist "%PROJECT_DIR%.env" goto :fail_env
 if not exist "%VENV_DIR%\Scripts\python.exe" goto :fail_venv
 
-echo [%time%] render-only: run_report.py --no-send > "%LOG%"
-"%VENV_DIR%\Scripts\python.exe" "%PROJECT_DIR%run_report.py" --no-send >> "%LOG%" 2>&1
+echo [%time%] render-only: run_report.py --no-send --skip-refresh > "%LOG%"
+"%VENV_DIR%\Scripts\python.exe" "%PROJECT_DIR%run_report.py" --no-send --skip-refresh >> "%LOG%" 2>&1
 set "RC=%ERRORLEVEL%"
 if not "%RC%"=="0" goto :fail_run
 

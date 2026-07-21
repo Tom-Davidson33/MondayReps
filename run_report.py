@@ -34,11 +34,13 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--no-send", action="store_true",
                     help="render only; skip Outlook (use this to test the look)")
+    ap.add_argument("--skip-refresh", action="store_true",
+                    help="do not run upstream models; use existing model output files only")
     args = ap.parse_args()
 
     week_label, week_start = _week_labels()
 
-    ctx = orchestrate.build_context(week_label, week_start)
+    ctx = orchestrate.build_context(week_label, week_start, refresh_models=not args.skip_refresh)
     subject = config.SUBJECT_FMT.format(week_start=week_start)
     html_path = render.render_to_file(ctx)
     print(f"[run] rendered -> {html_path}")

@@ -20,8 +20,22 @@ except ImportError:  # dependency check should still explain the issue cleanly
 
 ROOT = Path(__file__).parent
 ENV_PATH = ROOT / ".env"
-DB_PREFIXES = ("GASMARKET", "MEMARKET", "GASTRADING")
+# alias -> candidate env prefixes in preference order, mirroring connections._PREFIXES
+# (Godfather-style names first, then this report's original names).
+DB_ALIASES = {
+    "gas_market": ("GAS_MARKET", "GASMARKET"),
+    "me_market": ("ME_MARKET", "MEMARKET"),
+    "gas_trading": ("GAS_TRADING", "GASTRADING"),
+}
 ENTRY_CANDIDATES = ("main.py", "run.py", "forecast.py", "dwgm_forecast.py", "run_forecast.py", "godfather.py")
+
+
+def _resolve_prefix(candidates: tuple[str, ...]) -> str:
+    """First candidate with a {PREFIX}_USER set, else the preferred name."""
+    for prefix in candidates:
+        if _clean(os.environ.get(f"{prefix}_USER")):
+            return prefix
+    return candidates[0]
 
 
 def _clean(value: str | None) -> str:
@@ -53,13 +67,14 @@ def _has_db_address(prefix: str) -> tuple[bool, str]:
 def _check_db_env() -> bool:
     ok = True
     print("\nDatabase environment")
-    for prefix in DB_PREFIXES:
+    for alias, candidates in DB_ALIASES.items():
+        prefix = _resolve_prefix(candidates)
         user_ok = bool(_clean(os.environ.get(f"{prefix}_USER")))
         pass_ok = bool(_clean(os.environ.get(f"{prefix}_PASS")))
         addr_ok, addr_detail = _has_db_address(prefix)
-        ok &= _status(user_ok, f"{prefix}_USER")
-        ok &= _status(pass_ok, f"{prefix}_PASS", "set, hidden" if pass_ok else "")
-        ok &= _status(addr_ok, f"{prefix} connection address", addr_detail)
+        ok &= _status(user_ok, f"{alias}_USER", f"via {prefix}_USER" if user_ok else f"set {prefix}_USER")
+        ok &= _status(pass_ok, f"{alias}_PASS", "set, hidden" if pass_ok else "")
+        ok &= _status(addr_ok, f"{alias} connection address", addr_detail)
     return ok
 
 
@@ -90,7 +105,9 @@ def _resolve_command(repo: Path, command: str) -> tuple[bool, str]:
     return True, " ".join(parts)
 
 
-def _check_model(label: str, repo_key: str, models_key: str, command_key: str, outputs: tuple[str | tuple[str, ...], ...]) -> bool:
+def _check_model(label: str, repo_key: str, models_key: str, command_key: str,
+                 outputs: tuple[str | tuple[str, ...], ...],
+                 optional: frozenset[str] = frozenset()) -> bool:
     ok = True
     print(f"\n{label}")
     repo = _model_repo_from_env(repo_key, models_key)
@@ -109,11 +126,15 @@ def _check_model(label: str, repo_key: str, models_key: str, command_key: str, o
             choices = output if isinstance(output, tuple) else (output,)
             paths = [models_dir / name for name in choices]
             found = next((path for path in paths if path.exists()), None)
-            label = " or ".join(choices)
+            name = " or ".join(choices)
+            # Optional outputs (e.g. the Pelican daily chart export) drive one panel
+            # only — absent is a warning, not a hard failure that blocks the report.
+            if found is None and any(c in optional for c in choices):
+                print(f"[optional] {name} — not present; drives one chart only, "
+                      f"report still renders without it")
+                continue
             detail = str(found) if found else "checked " + "; ".join(str(p) for p in paths)
-            # Forecast outputs may be created by the next model run, so mark absent
-            # as fix-required for a clean report but do not print file contents.
-            ok &= _status(found is not None, label, detail)
+            ok &= _status(found is not None, name, detail)
     return ok
 
 
@@ -170,7 +191,9 @@ def main() -> int:
         load_dotenv(ENV_PATH, override=False)
 
     ok &= _check_db_env()
-    ok &= _check_model("GPG_NM / Pelican forecast", "GPG_NM_REPO_DIR", "GPG_NM_MODELS_DIR", "GPG_NM_COMMAND", ("gpg_forecast_latest.parquet", "gpg_forecast_meta.json", "pelican_daily_latest.parquet"))
+    ok &= _check_model("GPG_NM / Pelican forecast", "GPG_NM_REPO_DIR", "GPG_NM_MODELS_DIR", "GPG_NM_COMMAND",
+                       ("gpg_forecast_latest.parquet", "gpg_forecast_meta.json", "pelican_daily_latest.parquet"),
+                       optional=frozenset({"pelican_daily_latest.parquet"}))
     ok &= _check_model("Godfather / DWGM forecast", "GODFATHER_REPO_DIR", "GODFATHER_MODELS_DIR", "GODFATHER_COMMAND", (("dwgm_forecast_latest.parquet", "dwgm_forecast.pkl"),))
     ok &= _check_godfather_pickle_override()
     ok &= _check_gsh_env()

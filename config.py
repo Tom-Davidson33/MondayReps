@@ -82,30 +82,17 @@ CURVE_PICKLE = _Path(_curve_pickle_raw) if _curve_pickle_raw else None
 # Upstream model runners. These are used by both the Python freshness gate and the
 # Windows batch orchestrator. Keep tool names here only; report output remains
 # desk-safe via orchestrate.py/templates.
-def _repo_dir_from_env(repo_key: str, models_key: str) -> _Path | None:
+def _repo_dir_from_env(repo_key: str, models_key: str, default: _Path) -> _Path:
+    """Repo dir from {repo_key}, else the parent of {models_key}, else default."""
     repo = _os.environ.get(repo_key, "").strip()
     if repo:
         return _Path(repo)
     models_dir = _os.environ.get(models_key, "").strip()
-    return _Path(models_dir).parent if models_dir else None
+    return _Path(models_dir).parent if models_dir else default
 
 
-GPG_NM_REPO_DIR = _repo_dir_from_env("GPG_NM_REPO_DIR", "GPG_NM_MODELS_DIR")
-GODFATHER_REPO_DIR = _repo_dir_from_env("GODFATHER_REPO_DIR", "GODFATHER_MODELS_DIR")
-GPG_NM_COMMAND = _os.environ.get("GPG_NM_COMMAND", "python main.py").strip()
-GODFATHER_COMMAND = _os.environ.get("GODFATHER_COMMAND", "python main.py").strip()
-
-# Upstream model runners. These are used by both the Python freshness gate and the
-# Windows batch orchestrator. Keep tool names here only; report output remains
-# desk-safe via orchestrate.py/templates.
-GPG_NM_REPO_DIR = _Path(_os.environ.get(
-    "GPG_NM_REPO_DIR",
-    str(GPG_NM_MODELS_DIR.parent) if str(GPG_NM_MODELS_DIR) else "",
-).strip())
-GODFATHER_REPO_DIR = _Path(_os.environ.get(
-    "GODFATHER_REPO_DIR",
-    str(GODFATHER_MODELS_DIR.parent) if str(GODFATHER_MODELS_DIR) else "",
-).strip())
+GPG_NM_REPO_DIR = _repo_dir_from_env("GPG_NM_REPO_DIR", "GPG_NM_MODELS_DIR", DEFAULT_GPG_NM_REPO_DIR)
+GODFATHER_REPO_DIR = _repo_dir_from_env("GODFATHER_REPO_DIR", "GODFATHER_MODELS_DIR", DEFAULT_GODFATHER_REPO_DIR)
 GPG_NM_COMMAND = _os.environ.get("GPG_NM_COMMAND", "python main.py").strip()
 GODFATHER_COMMAND = _os.environ.get("GODFATHER_COMMAND", "python main.py").strip()
 

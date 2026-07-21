@@ -31,8 +31,12 @@ def _safe_read(name: str, reader, default):
         return default
 
 
-def _gate() -> FreshnessStamp:
-    """Run the ordered freshness chain. Returns a stamp describing the outcome."""
+def _gate(refresh: bool = True) -> FreshnessStamp:
+    """Run the ordered freshness chain. Returns a stamp describing the outcome.
+
+    refresh=False (``--skip-refresh``) reads the existing model timestamps without
+    triggering a model run — used for render-only previews off existing outputs.
+    """
     if not refresh:
         f = config.FRESHNESS["gpg_nm"]
         g = config.FRESHNESS["godfather"]

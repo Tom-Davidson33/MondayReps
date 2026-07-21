@@ -31,6 +31,21 @@ _PREFIXES = {
 _conns: dict[str, oracledb.Connection] = {}
 
 
+def _resolve_prefix(alias: str) -> str:
+    """Pick the env prefix actually configured for an alias.
+
+    Each alias has candidate prefixes in preference order (Godfather-style names
+    first, then this report's original names). Use the first candidate that has a
+    ``{PREFIX}_USER`` set; if none do, fall back to the preferred name so the
+    resulting error names the keys we expected.
+    """
+    candidates = _PREFIXES[alias]
+    for prefix in candidates:
+        if os.environ.get(f"{prefix}_USER", "").strip():
+            return prefix
+    return candidates[0]
+
+
 def _dsn(prefix: str) -> str:
     tns = os.environ.get(f"{prefix}_TNS", "").strip()
     if tns:
@@ -51,7 +66,7 @@ def _dsn(prefix: str) -> str:
 
 def _conn(alias: str) -> oracledb.Connection:
     if alias not in _conns or not _conns[alias].is_healthy():
-        prefix = _PREFIX[alias]
+        prefix = _resolve_prefix(alias)
         dsn = _dsn(prefix)
         try:
             _conns[alias] = oracledb.connect(

@@ -13,8 +13,7 @@ report is the LAST stage after the two model runs.
     pip install -r requirements.txt
     python check_setup.py           # verifies .env keys, paths and output files
     python check_setup.py --connect # optional: also SELECT 1 from each Oracle DB
-    python run_report.py --no-send --skip-refresh  # render only, use existing model files
-    python run_report.py --no-send      # render only, refresh stale model files first
+    python run_report.py --no-send      # render only
     python run_report.py                # render + Outlook draft
 
 **Batch runners (Windows):**
@@ -45,9 +44,9 @@ Verified against your Godfather / GPG_NM repos and wired with REAL queries:
 
 ## Two things you still set
 
-1. **.env** — DB creds/TNS/DSN or host/service + the two model dirs. If omitted,
-   the report defaults to your OneDrive folders:
-   `3. GPG_NM\models` and `4. Godfather\models`.
+1. **.env** — DB creds/TNS/DSN or host/service + the two model dirs. Your export path uses `GPG_NM`;
+   your repo folder is `3. GPG_NM`. Point GPG_NM_MODELS_DIR at wherever the parquet
+   actually lands, and check the Godfather dir.
 
 2. **Godfather curve export** — the report now reads the existing
    `GODFATHER_MODELS_DIR/dwgm_forecast.pkl` path, or an explicit

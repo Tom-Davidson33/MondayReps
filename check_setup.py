@@ -22,15 +22,6 @@ ROOT = Path(__file__).parent
 ENV_PATH = ROOT / ".env"
 DB_PREFIXES = ("GASMARKET", "MEMARKET", "GASTRADING")
 ENTRY_CANDIDATES = ("main.py", "run.py", "forecast.py", "dwgm_forecast.py", "run_forecast.py", "godfather.py")
-DEFAULT_OPERATION_ARB_DIR = Path(r"C:\Users\MS6653\OneDrive - ENGIE\Desktop\Operation Arb")
-DEFAULT_REPO_DIRS = {
-    "GPG_NM_REPO_DIR": DEFAULT_OPERATION_ARB_DIR / "3. GPG_NM",
-    "GODFATHER_REPO_DIR": DEFAULT_OPERATION_ARB_DIR / "4. Godfather",
-}
-DEFAULT_MODEL_DIRS = {
-    "GPG_NM_MODELS_DIR": DEFAULT_REPO_DIRS["GPG_NM_REPO_DIR"] / "models",
-    "GODFATHER_MODELS_DIR": DEFAULT_REPO_DIRS["GODFATHER_REPO_DIR"] / "models",
-}
 
 
 def _clean(value: str | None) -> str:
@@ -77,7 +68,7 @@ def _model_repo_from_env(repo_key: str, models_key: str) -> Path | None:
     if repo:
         return Path(repo)
     models_dir = _clean(os.environ.get(models_key))
-    return Path(models_dir).parent if models_dir else DEFAULT_REPO_DIRS.get(repo_key)
+    return Path(models_dir).parent if models_dir else None
 
 
 def _resolve_command(repo: Path, command: str) -> tuple[bool, str]:
@@ -92,8 +83,6 @@ def _resolve_command(repo: Path, command: str) -> tuple[bool, str]:
         if parts[1].lower() == "main.py":
             for candidate in ENTRY_CANDIDATES[1:]:
                 if (repo / candidate).exists():
-                    if candidate.lower() == "forecast.py":
-                        return True, f"auto-detectable as: {parts[0]} {candidate} forecast"
                     return True, f"auto-detectable as: {parts[0]} {candidate}"
             py_files = sorted(p.name for p in repo.glob("*.py")) if repo.exists() else []
             return False, "main.py missing; set command explicitly. Python files: " + (", ".join(py_files) or "none")
@@ -101,7 +90,7 @@ def _resolve_command(repo: Path, command: str) -> tuple[bool, str]:
     return True, " ".join(parts)
 
 
-def _check_model(label: str, repo_key: str, models_key: str, command_key: str, outputs: tuple[str | tuple[str, ...], ...], optional_outputs: tuple[str, ...] = ()) -> bool:
+def _check_model(label: str, repo_key: str, models_key: str, command_key: str, outputs: tuple[str | tuple[str, ...], ...]) -> bool:
     ok = True
     print(f"\n{label}")
     repo = _model_repo_from_env(repo_key, models_key)
@@ -112,8 +101,6 @@ def _check_model(label: str, repo_key: str, models_key: str, command_key: str, o
         ok &= _status(cmd_ok, command_key, cmd_detail)
 
     models_dir_raw = _clean(os.environ.get(models_key))
-    if not models_dir_raw and models_key in DEFAULT_MODEL_DIRS:
-        models_dir_raw = str(DEFAULT_MODEL_DIRS[models_key])
     models_dir = Path(models_dir_raw) if models_dir_raw else None
     ok &= _status(models_dir is not None, models_key, str(models_dir) if models_dir else "required for freshness/output reads")
     if models_dir is not None:
@@ -123,13 +110,10 @@ def _check_model(label: str, repo_key: str, models_key: str, command_key: str, o
             paths = [models_dir / name for name in choices]
             found = next((path for path in paths if path.exists()), None)
             label = " or ".join(choices)
-            optional = all(name in optional_outputs for name in choices)
             detail = str(found) if found else "checked " + "; ".join(str(p) for p in paths)
-            if optional and found is None:
-                detail += " (optional chart input; report still renders)"
             # Forecast outputs may be created by the next model run, so mark absent
             # as fix-required for a clean report but do not print file contents.
-            ok &= _status(found is not None or optional, label, detail)
+            ok &= _status(found is not None, label, detail)
     return ok
 
 
@@ -186,7 +170,7 @@ def main() -> int:
         load_dotenv(ENV_PATH, override=False)
 
     ok &= _check_db_env()
-    ok &= _check_model("GPG_NM / Pelican forecast", "GPG_NM_REPO_DIR", "GPG_NM_MODELS_DIR", "GPG_NM_COMMAND", ("gpg_forecast_latest.parquet", "gpg_forecast_meta.json", "pelican_daily_latest.parquet"), optional_outputs=("pelican_daily_latest.parquet",))
+    ok &= _check_model("GPG_NM / Pelican forecast", "GPG_NM_REPO_DIR", "GPG_NM_MODELS_DIR", "GPG_NM_COMMAND", ("gpg_forecast_latest.parquet", "gpg_forecast_meta.json", "pelican_daily_latest.parquet"))
     ok &= _check_model("Godfather / DWGM forecast", "GODFATHER_REPO_DIR", "GODFATHER_MODELS_DIR", "GODFATHER_COMMAND", (("dwgm_forecast_latest.parquet", "dwgm_forecast.pkl"),))
     ok &= _check_godfather_pickle_override()
     ok &= _check_gsh_env()

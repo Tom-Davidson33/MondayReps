@@ -110,11 +110,7 @@ set "DDIR=%~1"
 set "DVAR=%~2"
 for %%F in (run.py forecast.py dwgm_forecast.py run_forecast.py godfather.py) do (
     if exist "%DDIR%\%%F" (
-        if /i "%%F"=="forecast.py" (
-            set "%DVAR%=python %%F forecast"
-        ) else (
-            set "%DVAR%=python %%F"
-        )
+        set "%DVAR%=python %%F"
         exit /b 0
     )
 )

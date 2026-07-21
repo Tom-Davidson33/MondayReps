@@ -2,6 +2,7 @@
 Gas — LNG / supply outages.
 Source: GSH.GAS_MEDIUM_TERM_CAP_OUTLOOK joined to GSH.GAS_FACILITY_SUMMARY.
 Query lifted verbatim from your Godfather price_drivers.py (the MT capacity outlook).
+GSH lives on the electricity/me_market connection in your environment.
 """
 from __future__ import annotations
 import pandas as pd
@@ -31,7 +32,7 @@ ORDER BY O.FROMGASDATE
 
 
 def read_lng_outages() -> list[LngOutage]:
-    df = q("gas_market", _SQL)
+    df = q("me_market", _SQL)
     out: list[LngOutage] = []
     for _, r in df.iterrows():
         frm = pd.to_datetime(r["FROMGASDATE"])
